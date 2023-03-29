@@ -1,7 +1,9 @@
 import ftplib
 from glob import glob
 import os
-os.path.sep = "/"
+import watchdog.events
+import watchdog.observers
+import time
 
 class galaxiamover:
     def __init__(self):
@@ -19,8 +21,6 @@ class galaxiamover:
         
     def send_file(self, file_path):
         filename = os.path.basename(file_path)
-        print(filename)
-        print(self.ftp_server.pwd())
         with open(file_path, 'rb') as file:
             self.ftp_server.storbinary('STOR {}'.format( filename ), fp=file)
         
@@ -28,9 +28,34 @@ class galaxiamover:
         glob_input = os.path.join(path_to_the_file,"*.xml")
         filelist = glob(glob_input)
         return(filelist)
+    
+    def push_list_of_files(self):
+        return()
+    
+    
+class Handler(watchdog.events.PatternMatchingEventHandler):
+    def __init__(self):
+        watchdog.events.PatternMatchingEventHandler.__init__(self, patterns=['*.xml'],
+                                                             ignore_directories=True, case_sensitive=False)
+ 
+    def on_created(self, event):
+        print("Watchdog received created event - % s." % event.src_path)
         
-gl = galaxiamover()
-file = gl.get_files_to_transfer('Data')
-gl.open_connection()
-gl.send_file(file[0])
-gl.close_connection()
+if __name__ == "__main__":
+    # gl = galaxiamover()
+    # file = gl.get_files_to_transfer('Data')
+    # gl.open_connection()
+    # gl.send_file(file[0])
+    # gl.close_connection()
+    
+    src_path = 'Data'
+    event_handler = Handler()
+    observer = watchdog.observers.Observer()
+    observer.schedule(event_handler, path=src_path, recursive=True)
+    observer.start()
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        observer.stop()
+    observer.join()
